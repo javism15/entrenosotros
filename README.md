@@ -6,6 +6,10 @@ Escape room romántico para móvil creado con Next.js, React, TypeScript y Tailw
 
 [Jugar a Entre Nosotros](https://entre-nosotros-escape-room.chatpilila.chatgpt.site)
 
+## Documentación
+
+Consulta [DOCUMENTACION.md](DOCUMENTACION.md) para ver la explicación completa del juego, su arquitectura, estructura, persistencia, PWA y despliegue.
+
 ## Desarrollo
 
 ```bash
@@ -23,3 +27,4 @@ Los nombres, fechas, canciones, lugares, recuerdos, respuestas y el mensaje fina
 pnpm exec tsc --noEmit
 pnpm build
 ```
+
