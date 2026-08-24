@@ -1,9 +1,14 @@
 import { gameConfig } from '@/data/gameConfig';
 
-export function MainMenu({ canContinue, onStart, onContinue }: { canContinue: boolean; onStart: () => void; onContinue: () => void }) {
+export function MainMenu({ canContinue, userName, userPhoto, onStart, onContinue, onSignOut }: { canContinue: boolean; userName: string; userPhoto?: string | null; onStart: () => void; onContinue: () => void; onSignOut: () => void }) {
   return (
     <main className="game-shell menu-screen">
       <div className="ambient ambient-one" /><div className="ambient ambient-two" />
+      <div className="account-pill">
+        {userPhoto ? <img src={userPhoto} alt="" referrerPolicy="no-referrer" /> : <span>{userName.charAt(0).toUpperCase()}</span>}
+        <div><small>Partida sincronizada</small><strong>{userName}</strong></div>
+        <button onClick={onSignOut}>Salir</button>
+      </div>
       <section className="menu-card" aria-labelledby="game-title">
         <div className="sigil" aria-hidden="true">♡</div>
         <p className="eyebrow">Una habitación · Cinco recuerdos</p>
@@ -19,3 +24,4 @@ export function MainMenu({ canContinue, onStart, onContinue }: { canContinue: bo
     </main>
   );
 }
+

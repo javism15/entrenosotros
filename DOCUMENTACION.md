@@ -15,7 +15,9 @@ El proyecto está desarrollado con:
 - Vite como herramienta de compilación.
 - Vinext como capa de compatibilidad de Next.js sobre Vite y Cloudflare Workers.
 - OpenAI Sites para el despliegue actual.
-- `localStorage` para guardar el progreso en el dispositivo.
+- Firebase Authentication para el acceso directo con Google.
+- Cloud Firestore para sincronizar el progreso entre dispositivos.
+- `localStorage` como copia local y mecanismo de migración del progreso anterior.
 
 Demo publicada: [Entre Nosotros](https://entre-nosotros-escape-room.chatpilila.chatgpt.site)
 
@@ -64,12 +66,12 @@ El menú muestra:
 - El título configurable del juego.
 - El texto introductorio sobre los recuerdos perdidos.
 - El botón **Comenzar**.
-- El botón **Continuar partida**, únicamente si el navegador contiene una partida guardada.
+- El botón **Continuar partida**, cuando la cuenta contiene una partida iniciada.
 - Cinco pequeños indicadores visuales que anticipan los cinco fragmentos.
 
 Al pulsar **Comenzar**, se crea una partida nueva con todos los puzles incompletos. Después aparece un prólogo que introduce la misión.
 
-Al pulsar **Continuar partida**, se accede directamente a la habitación utilizando el progreso recuperado desde `localStorage`.
+Antes del menú se muestra una pantalla de acceso con Google. Al pulsar **Continuar partida**, se accede directamente a la habitación utilizando el progreso sincronizado de la cuenta.
 
 ### 2.4. Prólogo
 
@@ -219,9 +221,19 @@ También permite volver a abrir la colección completa de recuerdos.
 
 ---
 
-## 3. Guardado y recuperación del progreso
+## 3. Cuentas, guardado y recuperación del progreso
 
-El juego no necesita una cuenta de usuario ni una base de datos. El estado persistente se guarda en el navegador mediante `localStorage`.
+Cada visitante accede directamente con una cuenta de Google mediante Firebase Authentication. No se utiliza la cuenta de ChatGPT ni el sistema de acceso del alojamiento. Firebase entrega a la aplicación un identificador de usuario (`uid`), nombre, correo y foto de perfil.
+
+El progreso persistente se guarda en Cloud Firestore en el documento:
+
+```text
+gameProgress/{uid}
+```
+
+El documento solo puede ser leído o modificado por la cuenta autenticada cuyo `uid` coincide con el identificador del documento. Esta separación se aplica en servidor mediante `firestore.rules`, no solo en la interfaz.
+
+También se conserva una copia en `localStorage` con la clave:
 
 La clave utilizada es:
 
@@ -247,23 +259,30 @@ Ejemplo de una partida con los dos primeros puzles resueltos:
 }
 ```
 
+El hook `useGoogleAuth` se encarga de:
+
+1. Detectar la sesión guardada por Firebase.
+2. Abrir el selector oficial de cuentas de Google.
+3. Usar redirección si el navegador bloquea ventanas emergentes.
+4. Exponer el usuario actual y permitir cerrar sesión.
+
 El hook `useGameProgress` se encarga de:
 
-1. Esperar a que React se ejecute en el navegador.
-2. Leer el progreso guardado.
+1. Leer la copia local anterior.
+2. Descargar el documento de Firestore correspondiente al usuario.
 3. Validar que `completed` sea un array de cinco elementos.
-4. Exponer el estado a la interfaz.
-5. Guardar automáticamente cada cambio.
+4. Combinar ambas copias sin perder ningún puzle ya completado.
+5. Guardar automáticamente cada cambio tanto en local como en Firestore.
 6. Marcar un puzle concreto como completado sin modificar los demás.
-7. Poder borrar el progreso mediante `reset`, aunque actualmente no existe un botón visible que lo invoque.
+7. Añadir `updatedAt` con la hora del servidor para facilitar futuras ampliaciones.
 
-### Consecuencias de usar `localStorage`
+### Consecuencias del guardado híbrido
 
-- El progreso pertenece a un navegador y dispositivo concretos.
-- No se sincroniza entre iPhone, ordenador u otros navegadores.
-- Si se borran los datos del sitio, se pierde la partida.
-- No hay datos personales almacenados en un servidor.
-- El juego funciona sin inicio de sesión propio.
+- El progreso sigue disponible si se cambia de iPhone, ordenador o navegador.
+- Una partida local anterior se migra automáticamente a la cuenta al iniciar sesión.
+- Borrar los datos del navegador no elimina la copia de Firestore.
+- Si Firestore no está disponible temporalmente, la copia local permite seguir conservando el estado del dispositivo.
+- Firebase almacena los datos básicos de la cuenta de Google y el progreso de los cinco puzles.
 
 ---
 
@@ -276,7 +295,10 @@ flowchart LR
     U[Jugadora en iPhone] --> UI[React + componentes]
     UI --> CFG[data/gameConfig.ts]
     UI --> STATE[Estado React]
+    UI --> AUTH[Firebase Authentication]
     STATE <--> LS[localStorage del navegador]
+    STATE <--> DB[Cloud Firestore]
+    AUTH --> DB
     BUILD[Vinext + Vite] --> WORKER[Aplicación compatible con Cloudflare Workers]
     WORKER --> UI
     SITES[OpenAI Sites] --> WORKER
@@ -288,11 +310,11 @@ La aplicación es deliberadamente sencilla:
 - Una única ruta de juego.
 - Componentes React especializados.
 - Estado efímero con `useState`.
-- Progreso persistente con un hook y `localStorage`.
+- Sesión de usuario con Google y Firebase Authentication.
+- Progreso persistente con un hook, Firestore y copia local.
 - Configuración personal centralizada.
 - Sin API propia.
-- Sin base de datos.
-- Sin autenticación.
+- Sin servidor backend propio que mantener.
 
 ### 4.2. Frontend
 
@@ -326,17 +348,20 @@ Esta organización evita introducir un gestor de estado global o una librería d
 
 ### 4.3. Backend
 
-Actualmente **no existe un backend de aplicación tradicional**.
+No existe un servidor backend propio, pero Firebase actúa como backend administrado.
 
 No hay:
 
 - Endpoints API propios.
-- Servidor de usuarios.
-- Inicio de sesión.
 - Base de datos SQL.
 - Almacenamiento de imágenes subidas por usuarios.
-- Sincronización de partidas.
 - Panel de administración.
+
+Los servicios backend son:
+
+- **Firebase Authentication:** inicio de sesión directo con Google y persistencia de sesión.
+- **Cloud Firestore:** un documento de progreso por `uid`.
+- **Reglas de Firestore:** autorización en servidor para impedir que una cuenta consulte o cambie el progreso de otra.
 
 Next.js y Vinext generan una aplicación con capacidad de renderizado de servidor, pero la lógica del juego está marcada con `'use client'` y se ejecuta en el dispositivo. El servidor se limita a entregar la aplicación y sus recursos.
 
@@ -375,12 +400,12 @@ Viven en `data/gameConfig.ts` y forman parte del código desplegado:
 
 #### Datos de progreso
 
-Viven en `localStorage` y cambian durante la partida:
+Viven principalmente en Cloud Firestore, con una copia en `localStorage`, y cambian durante la partida:
 
 - Si la partida ha comenzado.
 - Qué puzles se han completado.
 
-No se mezclan. Cambiar el contenido requiere una nueva compilación y despliegue; completar un puzle solo modifica el almacenamiento local del navegador.
+No se mezclan. Cambiar el contenido requiere una nueva compilación y despliegue; completar un puzle actualiza el estado local y el documento privado de la cuenta.
 
 ---
 
@@ -396,6 +421,7 @@ escape-room/
 │   ├── manifest.ts
 │   └── page.tsx
 ├── components/
+│   ├── AuthScreen.tsx
 │   ├── EndingScreen.tsx
 │   ├── MainMenu.tsx
 │   ├── MemoryDrawer.tsx
@@ -404,7 +430,10 @@ escape-room/
 ├── data/
 │   └── gameConfig.ts
 ├── hooks/
+│   ├── useGoogleAuth.ts
 │   └── useGameProgress.ts
+├── lib/
+│   └── firebase.ts
 ├── public/
 │   ├── apple-touch-icon.png
 │   ├── favicon.svg
@@ -422,7 +451,10 @@ escape-room/
 ├── styles/
 │   └── theme.css
 ├── .gitignore
+├── .env.example
 ├── DOCUMENTACION.md
+├── firebase.json
+├── firestore.rules
 ├── README.md
 ├── eslint.config.mjs
 ├── next.config.ts
@@ -495,6 +527,10 @@ Contiene el diseño general del juego:
 
 Presenta el título, el comienzo y la continuación de partida.
 
+#### `AuthScreen.tsx`
+
+Presenta la entrada directa con Google antes de cargar el menú del juego. Informa de que se guardarán la identidad de acceso y el progreso.
+
 #### `RoomScreen.tsx`
 
 Renderiza la habitación, el HUD, los objetos, el cofre, el contador y la pista contextual.
@@ -541,13 +577,19 @@ Implementa el rompecabezas deslizante y su comprobación de victoria.
 
 ### 5.5. Directorio `hooks/`
 
-`useGameProgress.ts` encapsula la persistencia. Los componentes no necesitan conocer directamente la clave de `localStorage` ni la lógica de validación.
+`useGoogleAuth.ts` encapsula la sesión de Firebase y el flujo emergente o por redirección de Google.
 
-### 5.6. Directorio `styles/`
+`useGameProgress.ts` encapsula la carga, combinación y persistencia local/nube. Los componentes no necesitan conocer directamente la clave de `localStorage`, la ruta de Firestore ni la lógica de validación.
+
+### 5.6. Directorio `lib/`
+
+`firebase.ts` inicializa una única instancia del SDK y expone Authentication y Firestore. La configuración pública procede de variables `NEXT_PUBLIC_FIREBASE_*`.
+
+### 5.7. Directorio `styles/`
 
 `theme.css` define las variables cromáticas principales: tonos de texto, rosa, dorado y fondo nocturno. `globals.css` importa estas variables.
 
-### 5.7. Directorio `public/`
+### 5.8. Directorio `public/`
 
 Contiene recursos accesibles directamente desde la raíz pública:
 
@@ -558,11 +600,11 @@ Contiene recursos accesibles directamente desde la raíz pública:
 
 Por ejemplo, `public/icon-192.png` se sirve como `/icon-192.png`.
 
-### 5.8. Directorio `scripts/`
+### 5.9. Directorio `scripts/`
 
 `generate_icons.py` genera los iconos provisionales mediante Pillow. Permite reconstruirlos si se desea cambiar el símbolo o los colores.
 
-### 5.9. Archivos de configuración
+### 5.10. Archivos de configuración
 
 #### `package.json`
 
@@ -598,6 +640,14 @@ Relaciona el código local con el proyecto desplegado en Sites y declara las cap
 #### `.gitignore`
 
 Evita subir dependencias, resultados de compilación, cachés, archivos de entorno y paquetes de despliegue.
+
+#### `.env.example` y `.env.local`
+
+`.env.example` documenta las variables necesarias sin valores. `.env.local`, ignorado por Git, contiene la configuración pública del proyecto Firebase utilizada durante la compilación.
+
+#### `firebase.json` y `firestore.rules`
+
+`firebase.json` indica dónde están las reglas. `firestore.rules` permite acceder a `gameProgress/{uid}` únicamente cuando la sesión autenticada coincide con ese `uid`.
 
 ---
 
@@ -820,13 +870,15 @@ Mejoras futuras posibles:
 
 ## 13. Seguridad y privacidad
 
-La versión actual tiene una superficie reducida:
+La versión actual utiliza Firebase para las cuentas y el progreso:
 
-- No recibe contraseñas.
+- La aplicación nunca recibe ni almacena la contraseña de Google.
+- El acceso se realiza en la interfaz oficial de Google mediante OAuth.
 - No procesa pagos.
-- No envía progreso a servidores.
 - No utiliza una API privada.
-- No almacena datos personales de visitantes.
+- Firestore almacena el progreso asociado al `uid` de Firebase.
+- Las reglas impiden el acceso entre cuentas distintas.
+- La configuración web de Firebase y su clave de API son identificadores públicos; la protección real se aplica mediante dominios autorizados y reglas de Firestore.
 
 Sin embargo, debe tenerse en cuenta que:
 
@@ -848,7 +900,7 @@ El juego está pensado como experiencia romántica, no como sistema de protecci�
 - Contenido fotográfico provisional.
 - Sin sonido real.
 - Sin funcionamiento offline completo.
-- Sin sincronización entre dispositivos.
+- Sin panel para administrar usuarios o partidas.
 - Sin panel de configuración visual.
 - Sin sistema de pistas progresivas.
 - Sin pruebas automatizadas.
@@ -862,15 +914,15 @@ El juego está pensado como experiencia romántica, no como sistema de protecci�
 5. Botón visible para reiniciar la partida.
 6. Pantalla de ajustes de sonido y movimiento.
 7. Pistas graduadas después de varios intentos.
-8. Backend opcional para sincronización.
-9. Panel privado de edición de recuerdos.
+8. Panel privado de edición de recuerdos.
+9. Herramienta para eliminar la cuenta y sus datos.
 10. Pruebas unitarias de puzles y pruebas end-to-end del recorrido completo.
 
 ---
 
 ## 15. Resumen técnico final
 
-«Entre Nosotros» es una aplicación React de una sola ruta con apariencia de juego móvil. Next.js proporciona la estructura, React gestiona las transiciones y Vinext/Vite producen una compilación compatible con el alojamiento actual. Todo el contenido personal está centralizado en un archivo, mientras que el único dato generado por la jugadora —su progreso— permanece en el navegador.
+«Entre Nosotros» es una aplicación React de una sola ruta con apariencia de juego móvil. Next.js proporciona la estructura, React gestiona las transiciones y Vinext/Vite producen una compilación compatible con el alojamiento actual. Todo el contenido personal está centralizado en un archivo; Firebase autentica a cada jugadora con Google y sincroniza su progreso mediante Firestore.
 
 La separación de responsabilidades es la siguiente:
 
@@ -878,7 +930,8 @@ La separación de responsabilidades es la siguiente:
 - `components/`: pantallas y presentación.
 - `puzzles/`: mecánicas reutilizables.
 - `data/`: contenido y soluciones.
-- `hooks/`: persistencia local.
+- `hooks/`: autenticación y persistencia local/nube.
+- `lib/firebase.ts`: conexión con Firebase Authentication y Firestore.
 - `styles/` y `app/globals.css`: identidad visual.
 - `public/`: recursos estáticos y PWA.
 - `vite.config.ts`: compilación y runtime de alojamiento.
@@ -886,5 +939,5 @@ La separación de responsabilidades es la siguiente:
 - GitHub: control de versiones y copia pública del código.
 - OpenAI Sites: publicación de la aplicación en producción.
 
-Esta arquitectura mantiene la primera versión fácil de modificar y evita introducir un backend o un sistema de estado complejo antes de que sean necesarios.
+Esta arquitectura mantiene la primera versión fácil de modificar y utiliza un backend administrado sin introducir un servidor propio ni un sistema de estado complejo.
 

@@ -2,12 +2,14 @@
 
 import { useState } from 'react';
 import { EndingScreen } from '@/components/EndingScreen';
+import { AuthScreen } from '@/components/AuthScreen';
 import { MainMenu } from '@/components/MainMenu';
 import { MemoryDrawer } from '@/components/MemoryDrawer';
 import { MemoryReveal } from '@/components/MemoryReveal';
 import { RoomScreen } from '@/components/RoomScreen';
 import { gameConfig, puzzleDetails } from '@/data/gameConfig';
 import { useGameProgress } from '@/hooks/useGameProgress';
+import { useGoogleAuth } from '@/hooks/useGoogleAuth';
 import { ChoicePuzzle } from '@/puzzles/ChoicePuzzle';
 import { CodePuzzle } from '@/puzzles/CodePuzzle';
 import { PhotoPuzzle } from '@/puzzles/PhotoPuzzle';
@@ -16,7 +18,8 @@ import { PuzzleShell } from '@/puzzles/PuzzleShell';
 type Screen = 'menu' | 'room' | 'ending';
 
 export default function Home() {
-  const { progress, ready, start, completePuzzle } = useGameProgress();
+  const auth = useGoogleAuth();
+  const { progress, ready, start, completePuzzle } = useGameProgress(auth.user);
   const [screen, setScreen] = useState<Screen>('menu');
   const [activePuzzle, setActivePuzzle] = useState<number | null>(null);
   const [reveal, setReveal] = useState<number | null>(null);
@@ -31,11 +34,13 @@ export default function Home() {
   };
   const openPuzzle = (index: number) => progress.completed[index] ? setReveal(index) : setActivePuzzle(index);
 
+  if (!auth.ready) return <main className="game-shell loading-screen"><span className="loading-heart">♡</span></main>;
+  if (!auth.user) return <AuthScreen busy={auth.busy} error={auth.error} configured={auth.configured} onSignIn={auth.signIn} />;
   if (!ready) return <main className="game-shell loading-screen"><span className="loading-heart">♡</span></main>;
 
   return (
     <>
-      {screen === 'menu' && <MainMenu canContinue={progress.started} onStart={begin} onContinue={() => setScreen('room')} />}
+      {screen === 'menu' && <MainMenu canContinue={progress.started} userName={auth.user.displayName ?? auth.user.email ?? 'Jugador'} userPhoto={auth.user.photoURL} onStart={begin} onContinue={() => setScreen('room')} onSignOut={auth.signOut} />}
       {screen === 'room' && <RoomScreen completed={progress.completed} onPuzzle={openPuzzle} onMemories={() => setMemoriesOpen(true)} onChest={() => progress.completed.every(Boolean) && setScreen('ending')} onMenu={() => setScreen('menu')} />}
       {screen === 'ending' && <EndingScreen onMemories={() => setMemoriesOpen(true)} />}
 
@@ -65,3 +70,4 @@ export default function Home() {
     </>
   );
 }
+

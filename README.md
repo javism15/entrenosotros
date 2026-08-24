@@ -1,6 +1,6 @@
 # Entre Nosotros
 
-Escape room romántico para móvil creado con Next.js, React, TypeScript y Tailwind CSS.
+Escape room romántico para móvil creado con Next.js, React, TypeScript y Tailwind CSS. Incluye acceso directo con Google mediante Firebase Authentication y sincronización del progreso con Cloud Firestore.
 
 ## Demo
 
@@ -14,6 +14,7 @@ Consulta [DOCUMENTACION.md](DOCUMENTACION.md) para ver la explicación completa 
 
 ```bash
 pnpm install
+Copy-Item .env.example .env.local # completa la configuración pública de Firebase
 pnpm dev
 ```
 
