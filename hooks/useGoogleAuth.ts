@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   GoogleAuthProvider,
+  getRedirectResult,
   onAuthStateChanged,
-  signInWithPopup,
   signInWithRedirect,
   signOut as firebaseSignOut,
   type User,
@@ -24,6 +24,9 @@ export function useGoogleAuth() {
       return;
     }
     services.auth.useDeviceLanguage();
+    void getRedirectResult(services.auth).catch(() => {
+      setError('No se ha podido completar el acceso con Google. Inténtalo de nuevo.');
+    });
     return onAuthStateChanged(services.auth, (nextUser) => {
       setUser(nextUser);
       setReady(true);
@@ -38,15 +41,9 @@ export function useGoogleAuth() {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     try {
-      await signInWithPopup(services.auth, provider);
-    } catch (reason) {
-      const code = typeof reason === 'object' && reason && 'code' in reason ? String(reason.code) : '';
-      if (code === 'auth/popup-blocked' || code === 'auth/operation-not-supported-in-this-environment') {
-        await signInWithRedirect(services.auth, provider);
-      } else if (code !== 'auth/popup-closed-by-user') {
-        setError('No se ha podido iniciar sesión con Google. Inténtalo de nuevo.');
-      }
-    } finally {
+      await signInWithRedirect(services.auth, provider);
+    } catch {
+      setError('No se ha podido iniciar sesión con Google. Inténtalo de nuevo.');
       setBusy(false);
     }
   }, []);
