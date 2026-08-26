@@ -1,73 +1,90 @@
 'use client';
 
 import { useState } from 'react';
-import { EndingScreen } from '@/components/EndingScreen';
 import { AuthScreen } from '@/components/AuthScreen';
+import { FinalRoom } from '@/components/FinalRoom';
 import { MainMenu } from '@/components/MainMenu';
 import { MemoryDrawer } from '@/components/MemoryDrawer';
 import { MemoryReveal } from '@/components/MemoryReveal';
+import { RoomCompleteReveal } from '@/components/RoomCompleteReveal';
+import { RoomHub } from '@/components/RoomHub';
 import { RoomScreen } from '@/components/RoomScreen';
-import { gameConfig, puzzleDetails } from '@/data/gameConfig';
+import { SecretGallery } from '@/components/SecretGallery';
+import { gameConfig, getRoom } from '@/data/gameConfig';
 import { useGameProgress } from '@/hooks/useGameProgress';
 import { useGoogleAuth } from '@/hooks/useGoogleAuth';
-import { ChoicePuzzle } from '@/puzzles/ChoicePuzzle';
-import { CodePuzzle } from '@/puzzles/CodePuzzle';
-import { PhotoPuzzle } from '@/puzzles/PhotoPuzzle';
+import { haptic } from '@/lib/haptics';
+import { PuzzleRenderer } from '@/puzzles/PuzzleRenderer';
 import { PuzzleShell } from '@/puzzles/PuzzleShell';
+import type { RoomId } from '@/types/game';
 
-type Screen = 'menu' | 'room' | 'ending';
+type Screen = 'menu' | 'hub' | 'room' | 'ending';
 
 export default function Home() {
   const auth = useGoogleAuth();
-  const { progress, ready, start, completePuzzle } = useGameProgress(auth.user);
+  const game = useGameProgress(auth.user);
   const [screen, setScreen] = useState<Screen>('menu');
   const [activePuzzle, setActivePuzzle] = useState<number | null>(null);
+  const [attempts, setAttempts] = useState(0);
   const [reveal, setReveal] = useState<number | null>(null);
+  const [pendingRoomComplete, setPendingRoomComplete] = useState<RoomId | null>(null);
+  const [roomComplete, setRoomComplete] = useState<RoomId | null>(null);
+  const [secretReveal, setSecretReveal] = useState<RoomId | null>(null);
   const [memoriesOpen, setMemoriesOpen] = useState(false);
+  const [secretGalleryOpen, setSecretGalleryOpen] = useState(false);
   const [prologue, setPrologue] = useState(false);
-
-  const begin = () => { start(); setScreen('room'); setPrologue(true); };
-  const solve = (index: number) => {
-    completePuzzle(index);
-    setActivePuzzle(null);
-    setTimeout(() => setReveal(index), 180);
-  };
-  const openPuzzle = (index: number) => progress.completed[index] ? setReveal(index) : setActivePuzzle(index);
 
   if (!auth.ready) return <main className="game-shell loading-screen"><span className="loading-heart">♡</span></main>;
   if (!auth.user) return <AuthScreen busy={auth.busy} error={auth.error} configured={auth.configured} onSignIn={auth.signIn} />;
-  if (!ready) return <main className="game-shell loading-screen"><span className="loading-heart">♡</span></main>;
+  if (!game.ready) return <main className="game-shell loading-screen"><span className="loading-heart">♡</span></main>;
 
-  return (
-    <>
-      {screen === 'menu' && <MainMenu canContinue={progress.started} userName={auth.user.displayName ?? auth.user.email ?? 'Jugador'} userPhoto={auth.user.photoURL} onStart={begin} onContinue={() => setScreen('room')} onSignOut={auth.signOut} />}
-      {screen === 'room' && <RoomScreen completed={progress.completed} onPuzzle={openPuzzle} onMemories={() => setMemoriesOpen(true)} onChest={() => progress.completed.every(Boolean) && setScreen('ending')} onMenu={() => setScreen('menu')} />}
-      {screen === 'ending' && <EndingScreen onMemories={() => setMemoriesOpen(true)} />}
+  const room = getRoom(game.progress.currentRoomId);
+  const roomProgress = game.progress.rooms[room.id];
+  const activeConfig = activePuzzle === null ? null : room.puzzles[activePuzzle];
 
-      {prologue && (
-        <div className="overlay prologue-overlay" role="dialog" aria-modal="true" aria-labelledby="prologue-title">
-          <section className="prologue-card">
-            <span className="prologue-icon">⌑</span>
-            <p className="panel-kicker">Una voz en la oscuridad</p>
-            <h2 id="prologue-title">{gameConfig.playerName}, nuestros recuerdos han quedado encerrados.</h2>
-            <p>Esta habitación guarda cinco fragmentos de nuestra historia. Encuéntralos. Recuérdanos.</p>
-            <button className="primary-button" onClick={() => setPrologue(false)}>Entrar en la habitación</button>
-          </section>
-        </div>
-      )}
+  const enterRoom = (roomId: RoomId, showIntro = false) => {
+    game.setCurrentRoom(roomId);
+    setScreen('room');
+    setPrologue(showIntro);
+  };
+  const begin = () => { game.start(); enterRoom('beginning', true); };
+  const openPuzzle = (index: number) => {
+    setAttempts(0);
+    if (roomProgress.puzzles[index]) setReveal(index);
+    else setActivePuzzle(index);
+  };
+  const solve = (index: number) => {
+    const completesRoom = !roomProgress.puzzles[index] && roomProgress.puzzles.filter(Boolean).length === room.puzzles.length - 1;
+    game.completePuzzle(room.id, index);
+    haptic([25, 35, 45]);
+    setActivePuzzle(null);
+    if (completesRoom) setPendingRoomComplete(room.id);
+    setTimeout(() => setReveal(index), 180);
+  };
+  const closeMemoryReveal = () => {
+    setReveal(null);
+    if (pendingRoomComplete) { setRoomComplete(pendingRoomComplete); setPendingRoomComplete(null); }
+  };
+  const findRoomSecret = () => {
+    if (!game.progress.secrets.includes(room.secret.id)) {
+      game.findSecret(room.secret.id); haptic([18, 30, 18]); setSecretReveal(room.id);
+    }
+  };
+  const resetGame = async () => { await game.reset(); setScreen('menu'); };
 
-      {activePuzzle !== null && (
-        <PuzzleShell title={puzzleDetails[activePuzzle].title} hint={puzzleDetails[activePuzzle].hint} onClose={() => setActivePuzzle(null)}>
-          {activePuzzle === 0 && <CodePuzzle answer={gameConfig.importantDate} label="Introduce una fecha de cuatro cifras" onSolve={() => solve(0)} />}
-          {activePuzzle === 1 && <ChoicePuzzle options={gameConfig.songs} answer={gameConfig.correctSong} symbol="♪" onSolve={() => solve(1)} />}
-          {activePuzzle === 2 && <ChoicePuzzle options={gameConfig.locations} answer={gameConfig.correctLocation} symbol="⌖" onSolve={() => solve(2)} />}
-          {activePuzzle === 3 && <PhotoPuzzle onSolve={() => solve(3)} />}
-          {activePuzzle === 4 && <><div className="clue-strip"><span>Fecha</span><b>{gameConfig.importantDate.slice(0, 2)}</b><span>Fragmentos</span><b>0{progress.completed.slice(0, 4).filter(Boolean).length}</b></div><CodePuzzle answer={gameConfig.finalCode} label="Introduce el código final" onSolve={() => solve(4)} /></>}
-        </PuzzleShell>
-      )}
-      {reveal !== null && <MemoryReveal index={reveal} onClose={() => setReveal(null)} />}
-      {memoriesOpen && <MemoryDrawer completed={progress.completed} onClose={() => setMemoriesOpen(false)} />}
-    </>
-  );
+  return <>
+    {screen === 'menu' && <MainMenu canContinue={game.progress.started} userName={auth.user.displayName ?? auth.user.email ?? 'Jugador'} userPhoto={auth.user.photoURL} onStart={begin} onContinue={() => setScreen('hub')} onReset={resetGame} onSignOut={auth.signOut} />}
+    {screen === 'hub' && <RoomHub progress={game.progress} onRoom={(roomId) => enterRoom(roomId, !game.progress.rooms[roomId].puzzles.some(Boolean))} onMemories={() => setMemoriesOpen(true)} onFinal={() => setScreen('ending')} onMenu={() => setScreen('menu')} />}
+    {screen === 'room' && <RoomScreen room={room} progress={roomProgress} secretFound={game.progress.secrets.includes(room.secret.id)} onPuzzle={openPuzzle} onSecret={findRoomSecret} onMemories={() => setMemoriesOpen(true)} onChest={() => roomProgress.completed && setRoomComplete(room.id)} onHub={() => setScreen('hub')} />}
+    {screen === 'ending' && <FinalRoom allSecrets={game.progress.secrets.length === gameConfig.rooms.length} onMemories={() => setMemoriesOpen(true)} onSecretGallery={() => setSecretGalleryOpen(true)} onHub={() => setScreen('hub')} />}
+
+    {prologue && <div className="overlay prologue-overlay" role="dialog" aria-modal="true" aria-labelledby="prologue-title"><section className="prologue-card"><span className="prologue-icon">{room.objects[0].icon}</span><p className="panel-kicker">{room.title}</p><h2 id="prologue-title">{gameConfig.couple.playerName}, abre esta parte de nuestra historia.</h2><p>{room.intro}</p><button className="primary-button" onClick={() => setPrologue(false)}>Entrar en la habitación</button></section></div>}
+
+    {activePuzzle !== null && activeConfig && <PuzzleShell key={activeConfig.id} title={activeConfig.title} hint={activeConfig.hint} hints={activeConfig.hints} attempts={attempts} onClose={() => setActivePuzzle(null)}><PuzzleRenderer config={activeConfig} roomId={room.id} puzzleIndex={activePuzzle} completedCount={roomProgress.puzzles.slice(0, 4).filter(Boolean).length} onSolve={() => solve(activePuzzle)} onWrong={() => setAttempts((value) => value + 1)} /></PuzzleShell>}
+    {reveal !== null && <MemoryReveal room={room} index={reveal} onClose={closeMemoryReveal} />}
+    {roomComplete && <RoomCompleteReveal room={getRoom(roomComplete)} onContinue={() => { setRoomComplete(null); setScreen('hub'); }} />}
+    {secretReveal && <div className="overlay reveal-overlay" role="dialog" aria-modal="true" aria-labelledby="secret-title"><section className="secret-reveal"><span>{getRoom(secretReveal).secret.symbol}</span><p className="panel-kicker">Secreto encontrado · {game.progress.secrets.length}/5</p><h2 id="secret-title">{getRoom(secretReveal).secret.label}</h2><p>{getRoom(secretReveal).secret.message}</p><button className="primary-button" onClick={() => setSecretReveal(null)}>Guardarlo</button></section></div>}
+    {memoriesOpen && <MemoryDrawer progress={game.progress} initialRoomId={room.id} onClose={() => setMemoriesOpen(false)} />}
+    {secretGalleryOpen && <SecretGallery onClose={() => setSecretGalleryOpen(false)} />}
+  </>;
 }
-

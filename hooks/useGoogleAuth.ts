@@ -20,8 +20,8 @@ export function useGoogleAuth() {
   useEffect(() => {
     const services = getFirebaseServices();
     if (!services) {
-      setReady(true);
-      return;
+      const timer = window.setTimeout(() => setReady(true), 0);
+      return () => window.clearTimeout(timer);
     }
     services.auth.useDeviceLanguage();
     void getRedirectResult(services.auth).catch(() => {
@@ -55,4 +55,3 @@ export function useGoogleAuth() {
 
   return { user, ready, busy, error, configured: isFirebaseConfigured, signIn, signOut };
 }
-

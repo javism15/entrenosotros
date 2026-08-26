@@ -1,256 +1,172 @@
-# Documentación completa de «Entre Nosotros»
+# Documentación de «Entre Nosotros»
 
-## 1. Resumen del proyecto
+## 1. Qué es el juego
 
-**Entre Nosotros** es un escape room romántico diseñado como una experiencia de juego para móvil, especialmente para iPhone en orientación vertical. No intenta comportarse como una página web convencional: ocupa toda la pantalla, utiliza controles grandes, evita menús propios de escritorio y presenta la habitación, los puzles y los recuerdos mediante paneles animados superpuestos.
+**Entre Nosotros** es un escape room romántico mobile-first, diseñado principalmente para iPhone y construido como PWA. Carla accede con Google, recorre cinco habitaciones que representan distintas etapas de la relación, recupera cinco recuerdos en cada una y obtiene una letra especial por habitación. Las letras forman **C A R L A** y abren una sexta puerta con el desenlace.
 
-La premisa narrativa es sencilla: la jugadora despierta en una habitación misteriosa en la que se han encerrado cinco recuerdos de la relación. Para recuperarlos debe examinar objetos de la habitación, resolver cinco pruebas y reunir cinco fragmentos. Al completar la colección, el cofre final se desbloquea y muestra el desenlace romántico.
+La aplicación utiliza Next.js 16, React 19, TypeScript, Tailwind CSS 4, CSS propio, Vite, Vinext, Firebase Authentication, Cloud Firestore, `localStorage` y OpenAI Sites.
 
-El proyecto está desarrollado con:
+Demo: [Entre Nosotros](https://entre-nosotros-escape-room.chatpilila.chatgpt.site)
 
-- Next.js 16.
-- React 19.
-- TypeScript.
-- Tailwind CSS 4 y CSS propio.
-- Vite como herramienta de compilación.
-- Vinext como capa de compatibilidad de Next.js sobre Vite y Cloudflare Workers.
-- OpenAI Sites para el despliegue actual.
-- Firebase Authentication para el acceso directo con Google.
-- Cloud Firestore para sincronizar el progreso entre dispositivos.
-- `localStorage` como copia local y mecanismo de migración del progreso anterior.
-
-Demo publicada: [Entre Nosotros](https://entre-nosotros-escape-room.chatpilila.chatgpt.site)
-
-Repositorio: [javism15/entrenosotros](https://github.com/javism15/entrenosotros)
-
----
-
-## 2. En qué consiste el juego
-
-### 2.1. Objetivo principal
-
-La jugadora debe recuperar cinco fragmentos de memoria. Cada fragmento está asociado a uno de los objetos interactivos de la habitación y a un puzle concreto:
-
-1. Caja: código basado en una fecha importante.
-2. Radio: selección de una canción.
-3. Mapa: selección de un lugar.
-4. Fotografía: rompecabezas deslizante.
-5. Reloj: código final compuesto con pistas anteriores.
-
-Cuando los cinco fragmentos están desbloqueados, el cofre central deja de estar cerrado. Al tocarlo se accede a la pantalla final.
-
-### 2.2. Flujo completo de una partida
+## 2. Flujo del juego
 
 ```mermaid
 flowchart TD
-    A[Menú principal] -->|Comenzar| B[Prólogo]
-    A -->|Continuar| C[Habitación]
-    B --> C
-    C --> D[Examinar objeto]
-    D --> E[Resolver puzle]
-    E -->|Respuesta incorrecta| D
-    E -->|Respuesta correcta| F[Revelación de recuerdo]
-    F --> C
-    C --> G{¿Cinco recuerdos?}
-    G -->|No| D
-    G -->|Sí| H[Cofre desbloqueado]
-    H --> I[Pantalla final]
-    I --> J[Botón corazón]
-    J --> K[Mensaje romántico configurable]
+    A[Acceso con Google] --> B[Menú]
+    B -->|Comenzar| C[El comienzo]
+    B -->|Continuar| H[Pasillo]
+    C --> D[Resolver cinco puzles]
+    D --> E[Recuerdos y letra C]
+    E --> H
+    H --> F[Habitación desbloqueada]
+    F --> D
+    H --> G{¿Cinco habitaciones completas?}
+    G -->|No| F
+    G -->|Sí| I[Puerta misteriosa]
+    I --> J[Final C A R L A]
+    J --> K[Colección completa]
+    J -->|Cinco secretos| L[Galería secreta]
 ```
 
-### 2.3. Menú principal
+La primera partida entra en **El comienzo** y muestra un prólogo. Al volver al pasillo aparecen las cinco puertas con uno de estos estados:
 
-El menú muestra:
+- **Bloqueada:** la habitación anterior todavía no está completada.
+- **Disponible:** puede abrirse, pero aún no tiene progreso.
+- **En progreso:** ya contiene algún puzle resuelto.
+- **Completada:** sus cinco recuerdos y su letra están recuperados.
 
-- El título configurable del juego.
-- El texto introductorio sobre los recuerdos perdidos.
-- El botón **Comenzar**.
-- El botón **Continuar partida**, cuando la cuenta contiene una partida iniciada.
-- Cinco pequeños indicadores visuales que anticipan los cinco fragmentos.
+Completar una habitación desbloquea la siguiente. Cualquier habitación ya disponible puede volver a visitarse.
 
-Al pulsar **Comenzar**, se crea una partida nueva con todos los puzles incompletos. Después aparece un prólogo que introduce la misión.
+## 3. Las habitaciones
 
-Antes del menú se muestra una pantalla de acceso con Google. Al pulsar **Continuar partida**, se accede directamente a la habitación utilizando el progreso sincronizado de la cuenta.
+### El comienzo
 
-### 2.4. Prólogo
+Reutiliza la habitación y los cinco puzles originales: fecha, canción, lugar, fotografía deslizante y código final. Conserva el tono oscuro, misterioso y romántico. Su recompensa es la letra **C**.
 
-El prólogo se presenta como un diálogo a pantalla completa. Utiliza `playerName` para dirigirse a la jugadora y explica que los recuerdos se encuentran encerrados en la habitación.
+### Nuestras aventuras
 
-No es una ruta independiente. Es una capa modal controlada por estado React dentro de la página principal.
+Utiliza azules nocturnos, dorado, mapas, equipaje, billetes y postales. Incluye puzles configurables de cronología de viajes, fotografía, destino, descubrimiento y fecha. Su recompensa es la letra **A**.
 
-### 2.5. Habitación principal
+### Nuestro día a día
 
-La habitación es el centro de la experiencia. Contiene:
+Representa una casa cálida con sofá, televisión, nevera, teléfono y altavoz. Sus pruebas tratan comidas, series, conversaciones, canciones y complicidad. Incluye un teléfono ficticio con Mensajes, Fotos, Música, Mapas y Notas. Su recompensa es la letra **R**.
 
-- Una caja.
-- Una radio.
-- Un mapa.
-- Una fotografía.
-- Un reloj.
-- Un cofre final.
-- Un acceso a la colección de recuerdos.
-- Un texto de pista que cambia según el avance.
-- Un contador de fragmentos recuperados.
+### Carla
 
-Los objetos se representan como botones absolutos situados sobre una escena construida con CSS. Esto permite que sean accesibles, táctiles y fáciles de mantener sin depender todavía de una imagen definitiva de la habitación.
+Es una habitación más luminosa, rosa y elegante. Sus puzles de descubrimiento revelan mensajes sobre lo que el compañero ama, admira o quiere decirle a Carla. No funciona únicamente como examen de memoria. Su recompensa es la letra **L**.
 
-Los estados visuales de un objeto son:
+### Nuestro futuro
 
-- **Disponible:** muestra su símbolo y una animación luminosa.
-- **Completado:** muestra una marca de verificación.
-- **Bloqueado:** el reloj permanece cerrado hasta haber completado los cuatro primeros puzles.
+Empieza casi vacía y se llena de estrellas a medida que progresa. Sus pruebas hablan de destinos, planes, sueños, imágenes aún no tomadas y fechas futuras. Al completarse muestra los textos configurables sobre todo lo que todavía queda por llenar juntos. Su recompensa es la letra **A**.
 
-Si se toca un objeto ya completado, no se vuelve a resolver su puzle: se abre directamente el recuerdo correspondiente.
+## 4. Puzles y mecánicas
 
-### 2.6. Puzle 1: la caja y la fecha importante
+Todos los puzles se describen en `data/gameConfig.ts` mediante un campo `type`. `PuzzleRenderer` selecciona el componente adecuado sin duplicar habitaciones.
 
-La caja abre el puzle **La primera llave**.
+Tipos disponibles:
 
-Funcionamiento:
+- `code`: teclado de cuatro cifras.
+- `choice`: selección entre opciones.
+- `photo`: rompecabezas deslizante 3 × 3.
+- `discovery`: elección con una revelación personal posterior.
+- `phone`: interfaz móvil ficticia con pequeñas aplicaciones.
 
-- Se muestra un teclado numérico táctil.
-- La jugadora introduce cuatro cifras.
-- La solución se compara con `importantDate`.
-- Si el código es incorrecto, la interfaz tiembla, borra la entrada y muestra un mensaje de error.
-- Si es correcto, se completa el puzle y se revela el primer recuerdo.
+Cada puzle puede declarar `hints`. Después de dos intentos incorrectos aparece la pregunta **¿Quieres una pista?**. Carla decide cuándo mostrar cada pista y estas se revelan de una en una. Los intentos solo existen durante la sesión actual.
 
-La respuesta provisional actual es `1402`. Se cambia en `data/gameConfig.ts`.
+### Puzle fotográfico
 
-### 2.7. Puzle 2: la radio y la canción
+`PhotoPuzzle` recibe `image` e `imageAlt`. Divide visualmente la imagen en nueve posiciones mediante `background-size` y `background-position`, mantiene ocho piezas y un hueco, y solo admite movimientos horizontales o verticales adyacentes.
 
-La radio abre **Nuestra frecuencia**.
-
-Funcionamiento:
-
-- Se presentan varias canciones como botones grandes.
-- Las opciones proceden del array `songs`.
-- La respuesta correcta es el valor de `correctSong`.
-- Una selección incorrecta muestra una reacción visual y el mensaje «Ese recuerdo suena distinto…».
-- La canción correcta desbloquea el segundo fragmento.
-
-Para que este puzle funcione correctamente, `correctSong` debe coincidir exactamente con uno de los textos incluidos en `songs`.
-
-### 2.8. Puzle 3: el mapa y el lugar
-
-El mapa abre **Coordenadas del corazón**.
-
-Su comportamiento reutiliza el componente genérico de selección del puzle musical:
-
-- `locations` contiene las opciones visibles.
-- `correctLocation` contiene la respuesta válida.
-- El símbolo y el contenido cambian para representar localizaciones.
-- Una respuesta correcta desbloquea el tercer recuerdo.
-
-`correctLocation` debe coincidir exactamente con una entrada de `locations`.
-
-### 2.9. Puzle 4: la fotografía
-
-La fotografía abre **Imagen fragmentada**.
-
-Es un rompecabezas deslizante de 3 × 3:
-
-- Ocho casillas contienen piezas.
-- Una casilla se encuentra vacía.
-- Solo se puede mover una pieza adyacente al espacio vacío.
-- La adyacencia puede ser horizontal o vertical, nunca diagonal.
-- El orden resuelto es `1, 2, 3, 4, 5, 6, 7, 8, vacío`.
-- El botón **Reiniciar piezas** restaura la distribución inicial.
-
-La versión actual utiliza números y colores como contenido provisional. El componente está preparado para sustituirlos más adelante por secciones de una fotografía real.
-
-### 2.10. Puzle 5: el reloj y el código final
-
-El reloj abre **La última combinación** y solo está disponible cuando se han completado los cuatro puzles anteriores.
-
-Antes del teclado se muestra una tira de pistas:
-
-- Las dos primeras cifras de la fecha importante.
-- La cantidad de fragmentos anteriores completados, expresada con dos cifras.
-
-Con la configuración actual:
-
-- Fecha: `14`.
-- Fragmentos previos: `04`.
-- Código final: `1404`.
-
-La solución se guarda en `finalCode`. Si se cambia la fecha o la lógica de la pista, también debe revisarse `finalCode` para que el código mostrado y la respuesta esperada sigan siendo coherentes.
-
-### 2.11. Sistema de recuerdos
-
-Cada puzle está asociado por su índice a una entrada del array `memories`:
-
-| Índice | Objeto | Fragmento |
-|---:|---|---|
-| 0 | Caja | Recuerdo 1 |
-| 1 | Radio | Recuerdo 2 |
-| 2 | Mapa | Recuerdo 3 |
-| 3 | Fotografía | Recuerdo 4 |
-| 4 | Reloj | Recuerdo 5 |
-
-Cada memoria soporta:
-
-- `title`: título visible.
-- `description`: texto romántico o narrativo.
-- `image`: identificador provisional de imagen.
-
-Al completar un puzle aparece `MemoryReveal`, una pantalla de recompensa animada. El recuerdo también queda disponible de forma permanente en `MemoryDrawer`, la colección accesible desde la habitación.
-
-En la colección, los fragmentos pendientes aparecen atenuados y con un candado. Los recuperados muestran su título y descripción.
-
-### 2.12. Cofre y desenlace
-
-El cofre comprueba `progress.completed.every(Boolean)`. Mientras exista un puzle incompleto, tocarlo no produce la transición final.
-
-Cuando los cinco valores son `true`:
-
-- El cofre cambia de estilo.
-- Empieza a emitir luz y una pequeña animación.
-- El texto inferior cambia a **ÁBREME**.
-- Al tocarlo, la pantalla activa pasa de `room` a `ending`.
-
-La pantalla final muestra, en este orden:
-
-1. «Has recuperado todos nuestros recuerdos.»
-2. «Pero todavía nos quedan muchos por crear.»
-3. Un botón con forma de corazón.
-4. Al tocar el corazón, el mensaje almacenado en `finalMessage`.
-5. La firma configurada mediante `partnerName`.
-
-También permite volver a abrir la colección completa de recuerdos.
-
----
-
-## 3. Cuentas, guardado y recuperación del progreso
-
-Cada visitante accede directamente con una cuenta de Google mediante Firebase Authentication. No se utiliza la cuenta de ChatGPT ni el sistema de acceso del alojamiento. Firebase entrega a la aplicación un identificador de usuario (`uid`), nombre, correo y foto de perfil.
-
-El progreso persistente se guarda en Cloud Firestore en el documento:
-
-```text
-gameProgress/{uid}
-```
-
-El documento solo puede ser leído o modificado por la cuenta autenticada cuyo `uid` coincide con el identificador del documento. Esta separación se aplica en servidor mediante `firestore.rules`, no solo en la interfaz.
-
-También se conserva una copia en `localStorage` con la clave:
-
-La clave utilizada es:
-
-```text
-between-us-progress
-```
-
-El objeto guardado tiene esta forma:
+Ejemplo de configuración:
 
 ```ts
-type GameProgress = {
-  started: boolean;
-  completed: boolean[];
+{
+  type: 'photo',
+  image: '/memories/primer-viaje.webp',
+  imageAlt: 'Carla durante nuestro primer viaje'
+}
+```
+
+### Teléfono
+
+`PhonePuzzle` recibe desde configuración las aplicaciones visibles, la aplicación que contiene la pista, la conversación, la pregunta, las respuestas y la solución. Los componentes no contienen conversaciones personales fijas.
+
+### Descubrimiento
+
+`DiscoveryPuzzle` presenta una pregunta, tres opciones y una `revelation`. La revelación solo aparece después de seleccionar la respuesta configurada y puede expresar algo que el compañero piensa sobre Carla.
+
+## 5. Recuerdos, letras y secretos
+
+Cada habitación contiene cinco recuerdos. Cada recuerdo acepta:
+
+```ts
+type Memory = {
+  id: string;
+  title: string;
+  description: string;
+  image?: string;
+  imageAlt: string;
+  optionalDate?: string;
+  optionalLocation?: string;
+  optionalExtraText?: string;
+  audio?: string;
 };
 ```
 
-Ejemplo de una partida con los dos primeros puzles resueltos:
+La colección permite cambiar de habitación y muestra contadores como **El comienzo — 5/5**. Las habitaciones bloqueadas no se pueden seleccionar y los recuerdos pendientes continúan ocultos.
+
+Al completar cada habitación se muestra `RoomCompleteReveal` con su letra. El pasillo mantiene una cerradura visual de cinco posiciones que termina mostrando **C A R L A**.
+
+Cada habitación incluye un coleccionable secreto opcional. No es necesario para avanzar. Encontrar los cinco habilita la **Galería secreta** del final.
+
+## 6. Audios y respuesta háptica
+
+`AudioMessage` reproduce archivos definidos desde configuración. Incluye reproducción, pausa y progreso. No inicia sonido automáticamente, por lo que es compatible con las restricciones de Safari iOS.
+
+`lib/haptics.ts` intenta usar `navigator.vibrate` al resolver un puzle o encontrar un secreto. La vibración nunca transmite información imprescindible y falla silenciosamente cuando iPhone o el navegador no la admiten.
+
+## 7. Final
+
+Cuando las cinco habitaciones están completadas, el pasillo muestra una sexta puerta con `?`. Esa escena no contiene puzles. Presenta los mensajes de `gameConfig.final.messages` de forma secuencial y después muestra un corazón.
+
+Al tocar el corazón aparecen:
+
+- El mensaje final configurable.
+- Las letras **C A R L A**.
+- El audio final opcional.
+- El acceso a todos los recuerdos.
+- **Hay algo más…** cuando se han encontrado los cinco secretos.
+
+## 8. Progreso y migración
+
+El formato actual es:
+
+```ts
+type GameProgress = {
+  version: 2;
+  started: boolean;
+  currentRoomId: RoomId;
+  rooms: Record<RoomId, {
+    unlocked: boolean;
+    completed: boolean;
+    puzzles: boolean[];
+  }>;
+  secrets: string[];
+  legacy?: {
+    started: boolean;
+    completed: boolean[];
+  };
+};
+```
+
+Se guarda en:
+
+- `localStorage`, clave `between-us-progress`.
+- Cloud Firestore, documento `gameProgress/{uid}`.
+
+### Migración de partidas anteriores
+
+`migrateProgress` reconoce el formato anterior:
 
 ```json
 {
@@ -259,685 +175,185 @@ Ejemplo de una partida con los dos primeros puzles resueltos:
 }
 ```
 
-El hook `useGoogleAuth` se encarga de:
+Esos cinco valores pasan a `rooms.beginning.puzzles`. Si los cinco son verdaderos, **El comienzo** se marca como completado y se desbloquea **Nuestras aventuras**.
 
-1. Detectar la sesión guardada por Firebase.
-2. Abrir el selector oficial de cuentas de Google.
-3. Usar redirección si el navegador bloquea ventanas emergentes.
-4. Exponer el usuario actual y permitir cerrar sesión.
+La migración se ejecuta tanto al leer `localStorage` como al descargar Firestore. El guardado nuevo conserva una copia en `legacy`. En Firestore se usa escritura con `merge`, por lo que el campo antiguo `completed` no se elimina durante la migración. Al reiniciar voluntariamente la partida se guarda además el array antiguo con cinco valores falsos para impedir una remigración accidental.
 
-El hook `useGameProgress` se encarga de:
+Cuando existen progreso local y progreso en la nube:
 
-1. Leer la copia local anterior.
-2. Descargar el documento de Firestore correspondiente al usuario.
-3. Validar que `completed` sea un array de cinco elementos.
-4. Combinar ambas copias sin perder ningún puzle ya completado.
-5. Guardar automáticamente cada cambio tanto en local como en Firestore.
-6. Marcar un puzle concreto como completado sin modificar los demás.
-7. Añadir `updatedAt` con la hora del servidor para facilitar futuras ampliaciones.
+- Los puzles completados se combinan con una operación OR.
+- Los secretos se unen sin duplicados.
+- Los desbloqueos se reconstruyen en orden.
+- Nunca se cambia un puzle completado a pendiente durante la mezcla.
 
-### Consecuencias del guardado híbrido
+## 9. Reiniciar partida
 
-- El progreso sigue disponible si se cambia de iPhone, ordenador o navegador.
-- Una partida local anterior se migra automáticamente a la cuenta al iniciar sesión.
-- Borrar los datos del navegador no elimina la copia de Firestore.
-- Si Firestore no está disponible temporalmente, la copia local permite seguir conservando el estado del dispositivo.
-- Firebase almacena los datos básicos de la cuenta de Google y el progreso de los cinco puzles.
+El menú muestra una opción discreta **Reiniciar partida** cuando existe progreso. Abre una confirmación explícita. Al aceptar:
 
----
+- Restablece habitaciones, puzles y secretos en local.
+- Actualiza el mismo documento de Firestore.
+- Conserva la sesión de Google.
+- No elimina la cuenta ni cierra sesión.
 
-## 4. Arquitectura general
-
-### 4.1. Vista de alto nivel
-
-```mermaid
-flowchart LR
-    U[Jugadora en iPhone] --> UI[React + componentes]
-    UI --> CFG[data/gameConfig.ts]
-    UI --> STATE[Estado React]
-    UI --> AUTH[Firebase Authentication]
-    STATE <--> LS[localStorage del navegador]
-    STATE <--> DB[Cloud Firestore]
-    AUTH --> DB
-    BUILD[Vinext + Vite] --> WORKER[Aplicación compatible con Cloudflare Workers]
-    WORKER --> UI
-    SITES[OpenAI Sites] --> WORKER
-    GH[GitHub] --> SOURCE[Código fuente]
-```
-
-La aplicación es deliberadamente sencilla:
-
-- Una única ruta de juego.
-- Componentes React especializados.
-- Estado efímero con `useState`.
-- Sesión de usuario con Google y Firebase Authentication.
-- Progreso persistente con un hook, Firestore y copia local.
-- Configuración personal centralizada.
-- Sin API propia.
-- Sin servidor backend propio que mantener.
-
-### 4.2. Frontend
-
-El frontend incluye todo lo que la jugadora ve y con lo que interactúa:
-
-- Menú.
-- Habitación.
-- Objetos interactivos.
-- Puzles.
-- Colección de recuerdos.
-- Animaciones.
-- Final romántico.
-- PWA y metadatos móviles.
-
-`app/page.tsx` funciona como coordinador principal. Mantiene la pantalla activa y decide qué componente se debe renderizar.
-
-Estados principales:
-
-```ts
-type Screen = 'menu' | 'room' | 'ending';
-```
-
-Estados auxiliares:
-
-- `activePuzzle`: índice del puzle abierto o `null`.
-- `reveal`: índice del recuerdo que se está revelando o `null`.
-- `memoriesOpen`: indica si la colección está abierta.
-- `prologue`: indica si debe mostrarse el prólogo.
-
-Esta organización evita introducir un gestor de estado global o una librería de navegación para una experiencia que solo necesita una ruta.
-
-### 4.3. Backend
-
-No existe un servidor backend propio, pero Firebase actúa como backend administrado.
-
-No hay:
-
-- Endpoints API propios.
-- Base de datos SQL.
-- Almacenamiento de imágenes subidas por usuarios.
-- Panel de administración.
-
-Los servicios backend son:
-
-- **Firebase Authentication:** inicio de sesión directo con Google y persistencia de sesión.
-- **Cloud Firestore:** un documento de progreso por `uid`.
-- **Reglas de Firestore:** autorización en servidor para impedir que una cuenta consulte o cambie el progreso de otra.
-
-Next.js y Vinext generan una aplicación con capacidad de renderizado de servidor, pero la lógica del juego está marcada con `'use client'` y se ejecuta en el dispositivo. El servidor se limita a entregar la aplicación y sus recursos.
-
-En `.openai/hosting.json`:
-
-```json
-{
-  "d1": null,
-  "r2": null
-}
-```
-
-Esto confirma que no se ha habilitado:
-
-- **D1**, la base de datos SQLite distribuida de Cloudflare.
-- **R2**, el almacenamiento de objetos de Cloudflare.
-
-Si en el futuro se quisiera sincronizar el progreso, gestionar fotografías desde un panel o proteger el juego con acceso personalizado, entonces sí sería necesario diseñar una capa backend.
-
-### 4.4. Capa de datos
-
-Hay dos clases de datos:
-
-#### Datos de contenido
-
-Viven en `data/gameConfig.ts` y forman parte del código desplegado:
-
-- Títulos.
-- Nombres.
-- Fecha.
-- Canciones.
-- Lugares.
-- Soluciones.
-- Recuerdos.
-- Mensaje final.
-
-#### Datos de progreso
-
-Viven principalmente en Cloud Firestore, con una copia en `localStorage`, y cambian durante la partida:
-
-- Si la partida ha comenzado.
-- Qué puzles se han completado.
-
-No se mezclan. Cambiar el contenido requiere una nueva compilación y despliegue; completar un puzle actualiza el estado local y el documento privado de la cuenta.
-
----
-
-## 5. Estructura del proyecto
+## 10. Arquitectura
 
 ```text
 escape-room/
-├── .openai/
-│   └── hosting.json
 ├── app/
+│   ├── firebase-auth/[...path]/route.ts
 │   ├── globals.css
 │   ├── layout.tsx
 │   ├── manifest.ts
 │   └── page.tsx
 ├── components/
+│   ├── AudioMessage.tsx
 │   ├── AuthScreen.tsx
-│   ├── EndingScreen.tsx
+│   ├── FinalRoom.tsx
+│   ├── HintSystem.tsx
 │   ├── MainMenu.tsx
 │   ├── MemoryDrawer.tsx
 │   ├── MemoryReveal.tsx
-│   └── RoomScreen.tsx
-├── data/
-│   └── gameConfig.ts
+│   ├── RoomCompleteReveal.tsx
+│   ├── RoomHub.tsx
+│   ├── RoomScreen.tsx
+│   ├── SecretCollectible.tsx
+│   └── SecretGallery.tsx
+├── data/gameConfig.ts
 ├── hooks/
-│   ├── useGoogleAuth.ts
-│   └── useGameProgress.ts
+│   ├── useGameProgress.ts
+│   └── useGoogleAuth.ts
 ├── lib/
-│   └── firebase.ts
+│   ├── firebase.ts
+│   ├── firebaseAuthProxy.ts
+│   └── haptics.ts
 ├── public/
-│   ├── apple-touch-icon.png
-│   ├── favicon.svg
-│   ├── icon-192.png
-│   ├── icon-512.png
-│   ├── icon-maskable-512.png
-│   └── og.png
+│   ├── audio/
+│   └── memories/
 ├── puzzles/
 │   ├── ChoicePuzzle.tsx
 │   ├── CodePuzzle.tsx
+│   ├── DiscoveryPuzzle.tsx
+│   ├── PhonePuzzle.tsx
 │   ├── PhotoPuzzle.tsx
+│   ├── PuzzleRenderer.tsx
 │   └── PuzzleShell.tsx
-├── scripts/
-│   └── generate_icons.py
-├── styles/
-│   └── theme.css
-├── .gitignore
-├── .env.example
-├── DOCUMENTACION.md
-├── firebase.json
-├── firestore.rules
-├── README.md
-├── eslint.config.mjs
-├── next.config.ts
-├── package.json
-├── pnpm-lock.yaml
-├── pnpm-workspace.yaml
-├── tsconfig.json
-└── vite.config.ts
+└── types/game.ts
 ```
 
-### 5.1. Directorio `app/`
+Responsabilidades principales:
 
-Utiliza el App Router de Next.js.
+- `app/page.tsx`: orquesta pantallas y modales; no contiene soluciones personales.
+- `data/gameConfig.ts`: única fuente de contenido personal.
+- `types/game.ts`: contratos de habitaciones, puzles, recuerdos y progreso.
+- `hooks/useGameProgress.ts`: migración, mezcla, guardado, desbloqueo y reinicio.
+- `RoomHub`: pasillo, estados de puertas, letras y puerta final.
+- `RoomScreen`: escena genérica dirigida por el tema y los objetos configurados.
+- `PuzzleRenderer`: une cada `type` de configuración con su mecánica React.
+- Firebase Authentication: identidad Google.
+- Firestore: progreso durable por usuario.
+- `localStorage`: copia local y compatibilidad histórica.
 
-#### `app/page.tsx`
+No existe un backend propio. Firebase es el backend administrado. Las reglas siguen limitando cada documento a su `uid`; la nueva estructura no necesita ampliar permisos.
 
-Es el controlador de la experiencia:
+## 11. Personalizar a Carla
 
-- Carga el progreso.
-- Cambia entre menú, habitación y final.
-- Abre y cierra modales.
-- Selecciona el puzle correcto.
-- Marca los puzles como completados.
-- Lanza la revelación de cada recuerdo.
+Todo se edita en `data/gameConfig.ts`. Busca `TODO: PERSONALIZAR`. Allí están:
 
-#### `app/layout.tsx`
+- `couple.playerName` y `couple.partnerName`.
+- Títulos, subtítulos e introducciones.
+- Fechas y códigos.
+- Canciones y lugares.
+- Viajes y planes.
+- Conversaciones del teléfono.
+- Preguntas, respuestas y revelaciones.
+- Recuerdos.
+- Secretos.
+- Mensajes y audio final.
 
-Define la estructura HTML global y los metadatos:
+Las respuestas de `choice`, `discovery` y `phone` deben coincidir exactamente con una entrada de su array de opciones. Los códigos deben tener cuatro caracteres numéricos.
 
-- Idioma español.
-- Título y descripción.
-- Metadatos Open Graph y X/Twitter.
-- Imagen social `og.png`.
-- Icono para la pantalla de inicio de iPhone.
-- Configuración `appleWebApp`.
-- Viewport adaptado a móviles.
-- `viewportFit: 'cover'` para utilizar correctamente las zonas alrededor del notch y la Dynamic Island.
-- Color de tema oscuro.
+No se deben colocar credenciales Firebase ni secretos técnicos en este archivo. Las variables Firebase permanecen en `.env.local` y `.env.example` solo documenta sus nombres.
 
-#### `app/manifest.ts`
+## 12. Fotografías
 
-Genera el manifiesto web de la PWA:
+Coloca las fotos en `public/memories/`, preferiblemente WebP optimizado. Una ruta como:
 
-- Nombre completo y nombre corto.
-- Ruta inicial `/`.
-- Modo `standalone`.
-- Orientación vertical prioritaria.
-- Colores de fondo y tema.
-- Iconos normales y `maskable`.
+```text
+public/memories/primer-viaje.webp
+```
 
-#### `app/globals.css`
+se referencia así:
 
-Contiene el diseño general del juego:
+```ts
+image: '/memories/primer-viaje.webp'
+```
 
-- Habitación creada con gradientes y formas CSS.
-- Posición de objetos interactivos.
-- Paneles y modales.
-- Teclado numérico.
-- Rompecabezas fotográfico.
-- Colección de recuerdos.
-- Final romántico.
-- Animaciones.
-- Estados táctiles.
-- Media queries para pantallas bajas y escritorio.
-- Compatibilidad con `prefers-reduced-motion`.
+Define siempre `imageAlt`. `MemoryDrawer` y `MemoryReveal` utilizan `next/image`, `object-fit: cover` y recorte adaptado a tarjetas verticales. `PhotoPuzzle` usa la misma ruta como fondo dividido en piezas.
 
-### 5.2. Directorio `components/`
+Las fotografías incluidas en un repositorio público también serán públicas. Revisa la privacidad del repositorio antes de añadir imágenes reales.
 
-#### `MainMenu.tsx`
+## 13. Audios
 
-Presenta el título, el comienzo y la continuación de partida.
+Coloca los archivos en `public/audio/`. M4A y MP3 son opciones habituales para Safari iOS.
 
-#### `AuthScreen.tsx`
+```ts
+audio: '/audio/carla-room-message.m4a'
+```
 
-Presenta la entrada directa con Google antes de cargar el menú del juego. Informa de que se guardarán la identidad de acceso y el progreso.
+Puede añadirse `audio` a un recuerdo o a `gameConfig.final.audio`. No se almacenan bytes ni rutas en Firestore.
 
-#### `RoomScreen.tsx`
+## 14. Añadir una habitación
 
-Renderiza la habitación, el HUD, los objetos, el cofre, el contador y la pista contextual.
+1. Añade su identificador a `RoomId` en `types/game.ts`.
+2. Añade un objeto a `gameConfig.rooms` con tema, textos, recompensa, cinco objetos, puzles, recuerdos y secreto.
+3. Añade su identificador a `RoomTheme` si necesita un tema nuevo.
+4. Define las variables visuales o selectores `.room-theme-*` y `.door-*` en `app/globals.css`.
+5. La habitación entra automáticamente en el pasillo, la colección, el progreso, el desbloqueo y el final.
 
-#### `MemoryDrawer.tsx`
+## 15. Añadir un puzle
 
-Muestra la colección completa y diferencia fragmentos bloqueados y recuperados.
+Para reutilizar un tipo existente, añade una entrada en `room.puzzles` y un objeto visual en la misma posición de `room.objects`. La memoria con el mismo índice será su recompensa.
 
-#### `MemoryReveal.tsx`
+Para crear un tipo nuevo:
 
-Presenta la recompensa animada después de resolver cada puzle.
+1. Añade su interfaz al tipo discriminado `PuzzleConfig`.
+2. Crea un componente en `puzzles/`.
+3. Añade una rama en `PuzzleRenderer`.
+4. Haz que el componente llame `onSolve` al ganar y `onWrong` al fallar.
+5. Mantén todo texto personal dentro de `gameConfig.ts`.
 
-#### `EndingScreen.tsx`
+## 16. iPhone, PWA y accesibilidad
 
-Controla las dos fases del desenlace: frases finales y revelación del mensaje al pulsar el corazón.
+- El juego usa `100dvh`, ancho máximo de 480 px y safe areas.
+- Los controles táctiles principales alcanzan al menos 44 px.
+- El manifiesto mantiene `display: standalone` y `portrait-primary`.
+- No se modificaron los iconos PWA ni el flujo de instalación.
+- Los objetos interactivos son botones con etiquetas accesibles.
+- Los modales usan `role="dialog"`, `aria-modal` y títulos asociados.
+- Las imágenes requieren texto alternativo.
+- Los audios nunca empiezan solos.
+- `prefers-reduced-motion` reduce todas las animaciones.
+- La respuesta háptica es opcional.
 
-### 5.3. Directorio `puzzles/`
-
-#### `PuzzleShell.tsx`
-
-Panel reutilizable que proporciona:
-
-- Fondo modal.
-- Título.
-- Pista.
-- Botón de cierre.
-- Contenedor para el contenido particular de cada puzle.
-
-#### `CodePuzzle.tsx`
-
-Puzle numérico reutilizado para la fecha y el código final.
-
-#### `ChoicePuzzle.tsx`
-
-Puzle de selección reutilizado por la canción y la localización.
-
-#### `PhotoPuzzle.tsx`
-
-Implementa el rompecabezas deslizante y su comprobación de victoria.
-
-### 5.4. Directorio `data/`
-
-`gameConfig.ts` es la única fuente de contenido personal. De esta manera no es necesario buscar textos o respuestas por todos los componentes.
-
-### 5.5. Directorio `hooks/`
-
-`useGoogleAuth.ts` encapsula la sesión de Firebase y el flujo emergente o por redirección de Google.
-
-`useGameProgress.ts` encapsula la carga, combinación y persistencia local/nube. Los componentes no necesitan conocer directamente la clave de `localStorage`, la ruta de Firestore ni la lógica de validación.
-
-### 5.6. Directorio `lib/`
-
-`firebase.ts` inicializa una única instancia del SDK y expone Authentication y Firestore. La configuración pública procede de variables `NEXT_PUBLIC_FIREBASE_*`.
-
-### 5.7. Directorio `styles/`
-
-`theme.css` define las variables cromáticas principales: tonos de texto, rosa, dorado y fondo nocturno. `globals.css` importa estas variables.
-
-### 5.8. Directorio `public/`
-
-Contiene recursos accesibles directamente desde la raíz pública:
-
-- Iconos PWA.
-- Icono específico de Apple.
-- Favicon.
-- Imagen de previsualización social.
-
-Por ejemplo, `public/icon-192.png` se sirve como `/icon-192.png`.
-
-### 5.9. Directorio `scripts/`
-
-`generate_icons.py` genera los iconos provisionales mediante Pillow. Permite reconstruirlos si se desea cambiar el símbolo o los colores.
-
-### 5.10. Archivos de configuración
-
-#### `package.json`
-
-Declara versiones, dependencias y comandos.
-
-#### `pnpm-lock.yaml`
-
-Fija las versiones exactas de todas las dependencias transitivas para producir instalaciones reproducibles.
-
-#### `tsconfig.json`
-
-Configura TypeScript en modo estricto, resolución de módulos y el alias `@/*`.
-
-#### `vite.config.ts`
-
-Conecta:
-
-- Vinext.
-- Tailwind/PostCSS.
-- OpenAI Sites.
-- El plugin de Cloudflare.
-- El entorno React Server Components.
-- Las capacidades opcionales D1 y R2.
-
-#### `next.config.ts`
-
-Mantiene la configuración propia de Next.js. Actualmente no necesita opciones adicionales.
-
-#### `.openai/hosting.json`
-
-Relaciona el código local con el proyecto desplegado en Sites y declara las capacidades de persistencia del alojamiento.
-
-#### `.gitignore`
-
-Evita subir dependencias, resultados de compilación, cachés, archivos de entorno y paquetes de despliegue.
-
-#### `.env.example` y `.env.local`
-
-`.env.example` documenta las variables necesarias sin valores. `.env.local`, ignorado por Git, contiene la configuración pública del proyecto Firebase utilizada durante la compilación.
-
-#### `firebase.json` y `firestore.rules`
-
-`firebase.json` indica dónde están las reglas. `firestore.rules` permite acceder a `gameProgress/{uid}` únicamente cuando la sesión autenticada coincide con ese `uid`.
-
----
-
-## 6. Diseño responsive y soporte para iPhone
-
-La interfaz se construyó siguiendo una estrategia mobile-first:
-
-- El área jugable ocupa `100dvh`, que se adapta a los cambios de altura de Safari móvil.
-- La anchura máxima del juego es de 480 px.
-- En escritorio el juego continúa pareciendo una pantalla móvil centrada.
-- Se utilizan `env(safe-area-inset-top)` y `env(safe-area-inset-bottom)`.
-- Los botones principales tienen al menos 44–56 px de altura.
-- Se desactiva el resaltado táctil predeterminado.
-- Se prioriza la orientación `portrait-primary`.
-- No existen barras laterales ni navegación de escritorio.
-- `overscroll-behavior: none` evita rebotes y desplazamientos accidentales.
-- `touch-action: manipulation` mejora la respuesta de los botones.
-
-Las animaciones se reducen automáticamente si el sistema del usuario tiene activada la preferencia **Reducir movimiento**.
-
----
-
-## 7. PWA e instalación desde Safari
-
-El proyecto incluye los elementos necesarios para añadirlo a la pantalla de inicio:
-
-- Manifiesto web.
-- Iconos de 192 y 512 px.
-- Icono `maskable`.
-- `apple-touch-icon`.
-- Modo de visualización `standalone`.
-- Metadatos `appleWebApp`.
-- Color de tema.
-- Viewport compatible con zonas seguras.
-
-En iPhone:
-
-1. Abrir la URL en Safari.
-2. Pulsar **Compartir**.
-3. Seleccionar **Añadir a pantalla de inicio**.
-4. Confirmar el nombre.
-5. Abrir el icono instalado.
-
-El modo standalone elimina la barra habitual de Safari y hace que la experiencia se sienta más parecida a una aplicación.
-
-La versión actual no incorpora un service worker de caché offline. Por tanto, es instalable, pero necesita conexión para realizar la carga inicial.
-
----
-
-## 8. Desarrollo local
-
-### Requisitos
-
-- Node.js 22.13 o posterior.
-- pnpm.
-
-### Instalar dependencias
+## 17. Desarrollo y despliegue
 
 ```bash
 pnpm install
-```
-
-### Ejecutar el servidor de desarrollo
-
-```bash
 pnpm dev
-```
-
-El servidor utiliza Vinext y Vite. Los cambios se reflejan mediante recarga en caliente.
-
-### Comprobar TypeScript
-
-```bash
 pnpm exec tsc --noEmit
-```
-
-### Ejecutar ESLint
-
-```bash
 pnpm lint
-```
-
-### Crear la compilación de producción
-
-```bash
 pnpm build
 ```
 
-### Ejecutar la compilación
+Vinext genera la salida de Cloudflare Workers en `dist/`. OpenAI Sites publica esa salida. GitHub conserva el código, pero no despliega automáticamente la web.
 
-```bash
-pnpm start
-```
+La autenticación Google sigue utilizando Firebase y el proxy de mismo origen bajo `/__/auth/` para conservar la sesión en navegadores con restricciones de almacenamiento entre dominios.
 
----
+## 18. Privacidad y límites
 
-## 9. Proceso de compilación y despliegue
-
-### 9.1. Compilación
-
-El comando `pnpm build` llama a `vinext build`. La compilación genera varios entornos:
-
-1. Referencias del cliente.
-2. Referencias del servidor.
-3. Entorno RSC.
-4. JavaScript del cliente.
-5. Entorno SSR.
-
-El resultado se guarda en `dist/` y es compatible con Cloudflare Workers.
-
-### 9.2. Despliegue actual
-
-El despliegue se realiza mediante OpenAI Sites:
-
-1. Se valida TypeScript.
-2. Se crea una compilación de producción.
-3. Se guarda una versión del sitio.
-4. Se publica esa versión en la infraestructura de Sites.
-5. Sites ejecuta la salida compatible con Cloudflare Workers.
-
-La URL de producción actual es:
-
-```text
-https://entre-nosotros-escape-room.chatpilila.chatgpt.site
-```
-
-### 9.3. Relación entre GitHub y el despliegue
-
-GitHub contiene el código fuente y su historial, pero la publicación actual no depende automáticamente de GitHub Actions.
-
-En este momento son dos flujos separados:
-
-```text
-Código local → GitHub
-Código local compilado → OpenAI Sites → URL de producción
-```
-
-Subir un cambio a GitHub no actualiza automáticamente la URL de Sites. Para reflejar un cambio en producción se debe volver a compilar y publicar una nueva versión.
-
-### 9.4. Posible despliegue alternativo
-
-Al ser un proyecto Next.js/Vinext, podría adaptarse en el futuro a otros proveedores. Sin embargo, la configuración actual está orientada a Vite, Vinext, OpenAI Sites y Cloudflare Workers; no debe asumirse que un despliegue estándar de Next.js en cualquier plataforma funcionará sin revisar esa configuración.
-
----
-
-## 10. Cómo personalizar el contenido
-
-Todo el contenido principal se modifica en:
-
-```text
-data/gameConfig.ts
-```
-
-### Campos disponibles
-
-| Campo | Uso |
-|---|---|
-| `title` | Nombre del juego |
-| `playerName` | Nombre o apelativo de la jugadora |
-| `partnerName` | Firma del mensaje final |
-| `importantDate` | Respuesta de cuatro cifras del primer puzle |
-| `songs` | Opciones del puzle musical |
-| `correctSong` | Canción correcta |
-| `locations` | Opciones del puzle de lugares |
-| `correctLocation` | Lugar correcto |
-| `finalCode` | Respuesta del último teclado |
-| `finalMessage` | Mensaje revelado al pulsar el corazón |
-| `memories` | Cinco recuerdos con título, descripción e imagen |
-
-### Reglas importantes
-
-- Deben existir exactamente cinco recuerdos mientras `completed` tenga cinco posiciones.
-- `correctSong` debe estar dentro de `songs`.
-- `correctLocation` debe estar dentro de `locations`.
-- `importantDate` y `finalCode` deben contener cuatro cifras para encajar con el teclado actual.
-- Si se modifica la fórmula visual de las pistas del último puzle, debe actualizarse su solución.
-- El índice de cada memoria debe mantenerse alineado con el índice de su puzle.
-
----
-
-## 11. Cómo sustituir las imágenes provisionales
-
-Actualmente `memory.image` contiene identificadores como `01`, `02` y `03`. La interfaz los muestra como marcadores visuales.
-
-Para utilizar fotografías reales se recomienda:
-
-1. Guardar los archivos optimizados en `public/memories/`.
-2. Cambiar `image` por una ruta como `/memories/primer-dia.webp`.
-3. Sustituir el marcador de texto de `MemoryReveal` y `MemoryDrawer` por el componente `Image` de Next.js.
-4. Definir texto alternativo para accesibilidad.
-5. Utilizar WebP o AVIF y evitar fotografías excesivamente grandes.
-6. Comprobar el recorte vertical en iPhone.
-
-Si las imágenes muestran información personal y el repositorio continúa siendo público, esas fotografías también serán públicas en GitHub. En ese caso conviene convertir el repositorio a privado antes de añadirlas.
-
----
-
-## 12. Accesibilidad
-
-La aplicación incluye varias medidas:
-
-- Botones reales para objetos interactivos.
-- Etiquetas `aria-label` en controles sin texto visible.
-- Modales con `role="dialog"` y `aria-modal="true"`.
-- Relación entre títulos y diálogos mediante `aria-labelledby`.
-- Mensajes de error con `role="alert"` cuando procede.
-- Texto oculto accesible para el teclado numérico.
-- Objetivos táctiles grandes.
-- Compatibilidad con reducción de movimiento.
-
-Mejoras futuras posibles:
-
-- Gestión explícita del foco al abrir y cerrar modales.
-- Cierre mediante la tecla Escape.
-- Anuncios de lector de pantalla al recuperar recuerdos.
-- Mayor contraste en algunos textos secundarios.
-- Sonido opcional acompañado siempre de alternativa visual.
-
----
-
-## 13. Seguridad y privacidad
-
-La versión actual utiliza Firebase para las cuentas y el progreso:
-
-- La aplicación nunca recibe ni almacena la contraseña de Google.
-- El acceso se realiza en la interfaz oficial de Google mediante OAuth.
-- No procesa pagos.
-- No utiliza una API privada.
-- Firestore almacena el progreso asociado al `uid` de Firebase.
-- Las reglas impiden el acceso entre cuentas distintas.
-- La configuración web de Firebase y su clave de API son identificadores públicos; la protección real se aplica mediante dominios autorizados y reglas de Firestore.
-
-Sin embargo, debe tenerse en cuenta que:
-
-- El repositorio de GitHub es público actualmente.
-- Los textos incluidos en `gameConfig.ts` son visibles en el código fuente entregado al navegador.
-- Las soluciones de los puzles no constituyen secretos: una persona con conocimientos técnicos puede inspeccionarlas.
-- Si se añaden fotos reales al repositorio público, serán descargables.
-
-El juego está pensado como experiencia romántica, no como sistema de protección de información sensible.
-
----
-
-## 14. Límites actuales y posibles ampliaciones
-
-### Límites
-
-- Una sola habitación.
-- Cinco puzles fijos.
-- Contenido fotográfico provisional.
-- Sin sonido real.
-- Sin funcionamiento offline completo.
-- Sin panel para administrar usuarios o partidas.
-- Sin panel de configuración visual.
-- Sin sistema de pistas progresivas.
-- Sin pruebas automatizadas.
-
-### Ampliaciones razonables
-
-1. Fotografías reales y puzzle fotográfico basado en una imagen.
-2. Reproducción de fragmentos de audio propios o autorizados.
-3. Vibración háptica con `navigator.vibrate` donde sea compatible.
-4. Service worker para funcionamiento offline.
-5. Botón visible para reiniciar la partida.
-6. Pantalla de ajustes de sonido y movimiento.
-7. Pistas graduadas después de varios intentos.
-8. Panel privado de edición de recuerdos.
-9. Herramienta para eliminar la cuenta y sus datos.
-10. Pruebas unitarias de puzles y pruebas end-to-end del recorrido completo.
-
----
-
-## 15. Resumen técnico final
-
-«Entre Nosotros» es una aplicación React de una sola ruta con apariencia de juego móvil. Next.js proporciona la estructura, React gestiona las transiciones y Vinext/Vite producen una compilación compatible con el alojamiento actual. Todo el contenido personal está centralizado en un archivo; Firebase autentica a cada jugadora con Google y sincroniza su progreso mediante Firestore.
-
-La separación de responsabilidades es la siguiente:
-
-- `app/page.tsx`: orquestación.
-- `components/`: pantallas y presentación.
-- `puzzles/`: mecánicas reutilizables.
-- `data/`: contenido y soluciones.
-- `hooks/`: autenticación y persistencia local/nube.
-- `lib/firebase.ts`: conexión con Firebase Authentication y Firestore.
-- `styles/` y `app/globals.css`: identidad visual.
-- `public/`: recursos estáticos y PWA.
-- `vite.config.ts`: compilación y runtime de alojamiento.
-- `.openai/hosting.json`: vinculación con el despliegue.
-- GitHub: control de versiones y copia pública del código.
-- OpenAI Sites: publicación de la aplicación en producción.
-
-Esta arquitectura mantiene la primera versión fácil de modificar y utiliza un backend administrado sin introducir un servidor propio ni un sistema de estado complejo.
-
+- Las soluciones forman parte del JavaScript entregado al navegador; no deben tratarse como secretos.
+- Firestore solo almacena progreso, no textos, fotos ni audios.
+- Las reglas permiten leer y escribir únicamente `gameProgress/{uid}` cuando `request.auth.uid == uid`.
+- Los placeholders deben sustituirse antes de entregar el juego definitivo a Carla.
+- La PWA es instalable, pero no incorpora un service worker offline completo.
+- No se han añadido fotografías ni audios reales.

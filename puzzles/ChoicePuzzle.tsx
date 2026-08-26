@@ -2,12 +2,12 @@
 
 import { useState } from 'react';
 
-export function ChoicePuzzle({ options, answer, onSolve, symbol }: { options: readonly string[]; answer: string; onSolve: () => void; symbol: string }) {
+export function ChoicePuzzle({ options, answer, onSolve, symbol, onWrong }: { options: readonly string[]; answer: string; onSolve: () => void; symbol: string; onWrong?: () => void }) {
   const [wrong, setWrong] = useState<string | null>(null);
   return (
     <div className="choice-list">
       {options.map((option, index) => (
-        <button key={option} className={wrong === option ? 'wrong-choice' : ''} onClick={() => option === answer ? onSolve() : setWrong(option)}>
+        <button key={option} className={wrong === option ? 'wrong-choice' : ''} onClick={() => { if (option === answer) onSolve(); else { setWrong(option); onWrong?.(); } }}>
           <span className="choice-symbol">{symbol}</span><span><small>Opción {index + 1}</small>{option}</span><b>›</b>
         </button>
       ))}

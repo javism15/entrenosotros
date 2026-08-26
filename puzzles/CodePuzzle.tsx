@@ -2,12 +2,12 @@
 
 import { useState } from 'react';
 
-export function CodePuzzle({ answer, label, onSolve }: { answer: string; label: string; onSolve: () => void }) {
+export function CodePuzzle({ answer, label, onSolve, onWrong }: { answer: string; label: string; onSolve: () => void; onWrong?: () => void }) {
   const [value, setValue] = useState('');
   const [error, setError] = useState(false);
   const submit = () => {
     if (value === answer) onSolve();
-    else { setError(true); setValue(''); }
+    else { setError(true); setValue(''); onWrong?.(); }
   };
   return (
     <div className="puzzle-body">

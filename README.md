@@ -1,6 +1,6 @@
 # Entre Nosotros
 
-Escape room romántico para móvil creado con Next.js, React, TypeScript y Tailwind CSS. Incluye acceso directo con Google mediante Firebase Authentication y sincronización del progreso con Cloud Firestore.
+Escape room romántico multi-habitación para móvil creado con Next.js, React, TypeScript y Tailwind CSS. Incluye cinco capítulos, 25 puzles configurables, recuerdos, secretos, acceso directo con Google y sincronización del progreso con Cloud Firestore.
 
 ## Demo
 
@@ -20,12 +20,12 @@ pnpm dev
 
 ## Personalización
 
-Los nombres, fechas, canciones, lugares, recuerdos, respuestas y el mensaje final se editan desde `data/gameConfig.ts`.
+Todo el contenido personal de Carla —nombres, fechas, viajes, canciones, conversaciones, respuestas, recuerdos, audios, secretos y final— se edita desde `data/gameConfig.ts`. Las fotografías se guardan en `public/memories/` y los audios en `public/audio/`.
 
 ## Comprobaciones
 
 ```bash
 pnpm exec tsc --noEmit
+pnpm lint
 pnpm build
 ```
-

@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'Entre Nosotros — Escape Room',
     short_name: 'Entre Nosotros',
-    description: 'Una habitación, cinco recuerdos y una historia por recuperar.',
+    description: 'Cinco habitaciones románticas, veinticinco recuerdos y una historia por recuperar.',
     start_url: '/',
     display: 'standalone',
     orientation: 'portrait-primary',
